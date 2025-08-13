@@ -40,24 +40,31 @@ $container->set(
 $container->set(
     \PDO::class,
     function () {
-        $databaseUrl = parse_url($_ENV['DATABASE_URL']);
+        if (!isset($_ENV['DATABASE_URL'])) {
+            throw new RuntimeException('DATABASE_URL environment variable is not set');
+        }
 
-        $host = $databaseUrl['host'];
+        $databaseUrl = parse_url($_ENV['DATABASE_URL']);
+        if ($databaseUrl === false) {
+            throw new RuntimeException('Failed to parse DATABASE_URL');
+        }
+
+        $host = $databaseUrl['host'] ?? 'localhost';
         $port = $databaseUrl['port'] ?? '5432';
-        $dbname = ltrim($databaseUrl['path'], '/');
-        $user = $databaseUrl['user'];
-        $password = $databaseUrl['pass'];
-        $conStr = sprintf(
-            "pgsql:host=%s;port=%d;dbname=%s;user=%s;password=%s",
-            $host,
-            $port,
-            $dbname,
-            $user,
-            $password
-        );
-        $conn = new \PDO($conStr);
-        $conn->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-        return $conn;
+        $dbname = ltrim($databaseUrl['path'] ?? '', '/');
+        $user = $databaseUrl['user'] ?? '';
+        $password = $databaseUrl['pass'] ?? '';
+
+        $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
+
+        try {
+            $conn = new \PDO($dsn, $user, $password);
+            $conn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            $conn->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+            return $conn;
+        } catch (\PDOException $e) {
+            throw new RuntimeException("Database connection failed: " . $e->getMessage());
+        }
     }
 );
 

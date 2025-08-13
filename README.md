@@ -1,7 +1,7 @@
 ### Hexlet tests and linter status:
 [![Actions Status](https://github.com/aabelyaev/php-project-9/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/aabelyaev/php-project-9/actions)
 
-### Ссылка на домен: https://php-project-9-nkzb.onrender.com
+### Ссылка на домен: https://php-project-9-new.onrender.com/
 
 ---
 
