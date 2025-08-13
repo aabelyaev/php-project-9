@@ -37,45 +37,29 @@ $container->set(
     }
 );
 
-$container->set('db', function () {
-    if (!isset($_ENV['DATABASE_URL'])) {
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
-        $dotenv->load();
+$container->set(
+    \PDO::class,
+    function () {
+        $databaseUrl = parse_url($_ENV['DATABASE_URL']);
+
+        $host = $databaseUrl['host'];
+        $port = $databaseUrl['port'] ?? '5432';
+        $dbname = ltrim($databaseUrl['path'], '/');
+        $user = $databaseUrl['user'];
+        $password = $databaseUrl['pass'];
+        $conStr = sprintf(
+            "pgsql:host=%s;port=%d;dbname=%s;user=%s;password=%s",
+            $host,
+            $port,
+            $dbname,
+            $user,
+            $password
+        );
+        $conn = new \PDO($conStr);
+        $conn->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+        return $conn;
     }
-    $dbUrl = $_ENV['DATABASE_URL'];
-    $parsedDbUrl = parse_url($dbUrl);
-    $host = $parsedDbUrl['host'] ?? null;
-    $port = $parsedDbUrl['port'] ?? 5432;
-    $dbname = ltrim($parsedDbUrl['path'], '/') ?? null;
-    $username = $parsedDbUrl['user'] ?? null;
-    $password = $parsedDbUrl['pass'] ?? null;
-
-    $dns = "pgsql:host=$host;port=$port;dbname=$dbname";
-    $pdo = new \PDO($dns, $username, $password);
-    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS urls (
-            id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-            name VARCHAR(255) UNIQUE NOT NULL,
-            created_at timestamp
-        )
-    ");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS url_checks (
-            id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-            url_id bigint REFERENCES urls (id),
-            status_code int,
-            h1 varchar(255),
-           title varchar(255),
-           description text,
-           created_at timestamp
-        )
-    ");
-
-    return $pdo;
-});
+);
 
 
 $initFilePath = implode('/', [dirname(__DIR__), 'database.sql']);
